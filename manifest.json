@@ -2,7 +2,7 @@
   "name": "DG444 — Habit & Level System",
   "short_name": "DG444",
   "description": "Sistema personal de hábitos gamificado. Sube de nivel construyendo disciplina.",
-  "start_url": "./index.html",
+  "start_url": "/",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
