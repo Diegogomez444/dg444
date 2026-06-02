@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <title>DG444 — Habit & Level System</title>
+  <meta name="description" content="Sistema personal de hábitos gamificado. Sube de nivel construyendo disciplina." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#080a0e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DG444" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ============ SPLASH ============ -->
+  <div id="splash" class="splash">
+    <div class="splash-logo">DG<span>444</span></div>
+    <div class="splash-sub">HABIT &amp; LEVEL SYSTEM</div>
+    <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+    <div class="splash-loading">CARGANDO...</div>
+  </div>
+
+  <!-- ============ AUTH (login / registro) ============ -->
+  <div id="auth" class="auth-screen hidden"></div>
+
+  <!-- ============ ONBOARDING ============ -->
+  <div id="onboarding" class="onb-screen hidden"></div>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="app hidden">
+
+    <!-- Top nav -->
+    <header class="topnav">
+      <div class="topnav-logo">DG<span>444</span></div>
+      <div class="topnav-streak" id="topStreak">
+        <span class="flame">🔥</span><span id="topStreakNum">0</span>
+      </div>
+    </header>
+
+    <!-- Sticky day progress -->
+    <div class="dayprogress" id="dayProgress">
+      <div class="dayprogress-bar"><div class="dayprogress-fill" id="dayProgressFill"></div></div>
+      <div class="dayprogress-label" id="dayProgressLabel">0 completados · 0 hábitos hoy</div>
+    </div>
+
+    <!-- Streak danger banner -->
+    <div class="streak-danger hidden" id="streakDanger">
+      <span class="sd-fire">🔥</span>
+      <div class="sd-text" id="streakDangerText">¡Tu racha está en peligro!</div>
+      <button class="sd-close" id="streakDangerClose">✕</button>
+    </div>
+
+    <main class="screen" id="screen">
+      <!-- Páginas se renderizan aquí -->
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="bottomnav">
+      <button class="navbtn active" data-page="dashboard"><span class="navico">🏠</span><span>Inicio</span></button>
+      <button class="navbtn" data-page="habits"><span class="navico">⚔️</span><span>Hábitos</span></button>
+      <button class="navbtn" data-page="stats"><span class="navico">📊</span><span>Stats</span></button>
+      <button class="navbtn" data-page="rewards"><span class="navico">🎁</span><span>Premios</span></button>
+      <button class="navbtn" data-page="settings"><span class="navico">⚙️</span><span>Ajustes</span></button>
+    </nav>
+  </div>
+
+  <!-- Modal host -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-sheet" id="modalSheet"></div>
+  </div>
+
+  <!-- Toast host -->
+  <div class="toast-host" id="toastHost"></div>
+
+  <!-- XP pop host -->
+  <div class="xppop-host" id="xppopHost"></div>
+
+  <!-- Confetti canvas -->
+  <canvas class="confetti-canvas hidden" id="confettiCanvas"></canvas>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DG444 — Cargando demo...</title>
+  <style>
+    body { background: #080a0e; color: #eaeaea; font-family: 'DM Sans', system-ui, sans-serif;
+           display: flex; flex-direction: column; align-items: center; justify-content: center;
+           height: 100vh; margin: 0; gap: 20px; }
+    .logo { font-family: Georgia, serif; font-weight: 900; font-size: 52px; letter-spacing: 2px; }
+    .logo span { color: #c9a84c; }
+    .sub { font-size: 12px; letter-spacing: 3px; color: #8a8f9e; }
+    .bar { width: 200px; height: 4px; background: #161b26; border-radius: 4px; overflow: hidden; }
+    .fill { height: 100%; width: 0; background: linear-gradient(90deg, #c9a84c, #f0c060);
+            transition: width 0.4s; }
+    .msg { font-size: 13px; color: #8a8f9e; min-height: 20px; }
+  </style>
+</head>
+<body>
+  <div class="logo">DG<span>444</span></div>
+  <div class="sub">CARGANDO DEMO...</div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="msg" id="msg">Creando usuario demo...</div>
+
+<script type="module">
+const ACCOUNTS_KEY   = 'dg444_accounts';
+const SESSION_KEY    = 'dg444_session';
+const STATE_PREFIX   = 'dg444_state__';
+
+const fill = document.getElementById('fill');
+const msg  = document.getElementById('msg');
+const step = (pct, text) => { fill.style.width = pct + '%'; msg.textContent = text; };
+
+// ---------- SHA-256 helper ----------
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function randomSalt() {
+  const a = new Uint8Array(16); crypto.getRandomValues(a);
+  return [...a].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ---------- Fecha de hoy ISO ----------
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function daysAgoISO(n) {
+  const d = new Date(Date.now() - n * 86400000);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function weekDataForToday() {
+  // [L,M,X,J,V,S,D] — rellenar días pasados de la semana con datos realistas
+  const dayOfWeek = new Date().getDay(); // 0=Dom
+  const todayIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const past = [9, 10, 8, 11, 7, 5]; // datos de días anteriores
+  const data = [0,0,0,0,0,0,0];
+  for (let i = 0; i < todayIdx; i++) data[i] = past[i] || 0;
+  data[todayIdx] = 6; // hoy: 6 completados
+  return data;
+}
+
+// ---------- Hábitos demo ----------
+const ALL = ['L','M','X','J','V','S','D'];
+const WD  = ['L','M','X','J','V'];
+const HABITS = [
+  { id:'1',  name:'Ir al gym',              emoji:'🏋️', days:[...WD],  cat:'salud',   difficulty:'hard',   anchor:'Al despertar — ropa lista la noche anterior', mvh:'10 sentadillas + 10 flexiones en casa', isKeystone:true  },
+  { id:'2',  name:'Tomar creatina',         emoji:'💊', days:[...ALL], cat:'bio',     difficulty:'easy',   anchor:'Después del gym', mvh:'', isKeystone:false },
+  { id:'3',  name:'Tomar vinagre',          emoji:'🍶', days:[...ALL], cat:'bio',     difficulty:'easy',   anchor:'Con el desayuno',  mvh:'', isKeystone:false },
+  { id:'4',  name:'Tomar citrato',          emoji:'🧪', days:[...ALL], cat:'bio',     difficulty:'easy',   anchor:'Antes de dormir',  mvh:'', isKeystone:false },
+  { id:'5',  name:'Tomar colágeno',         emoji:'🦴', days:[...ALL], cat:'bio',     difficulty:'easy',   anchor:'Con el desayuno',  mvh:'', isKeystone:false },
+  { id:'6',  name:'Alimentarme sanamente',  emoji:'🥗', days:[...ALL], cat:'salud',   difficulty:'normal', anchor:'', mvh:'Al menos 1 comida saludable', isKeystone:false },
+  { id:'7',  name:'Leer mínimo 10 páginas', emoji:'📖', days:[...ALL], cat:'mente',   difficulty:'normal', anchor:'Después de cenar', mvh:'1 página antes de dormir', isKeystone:false },
+  { id:'8',  name:'Agradecer',              emoji:'🙏', days:[...ALL], cat:'mente',   difficulty:'easy',   anchor:'Al despertar', mvh:'Decir 1 cosa en voz alta', isKeystone:false },
+  { id:'9',  name:'Hablar con mis papás',   emoji:'👨‍👩‍👦', days:[...ALL], cat:'familia', difficulty:'easy',   anchor:'', mvh:'Mensaje de voz rápido', isKeystone:false },
+  { id:'10', name:'Estudiar mínimo 1h',     emoji:'💼', days:[...WD],  cat:'negocio', difficulty:'hard',   anchor:'Al llegar al escritorio, 9am', mvh:'20 min de lo más importante', isKeystone:false },
+  { id:'11', name:'Tomar agua',             emoji:'💧', days:[...ALL], cat:'salud',   difficulty:'easy',   anchor:'Al despertar', mvh:'1 vaso', isKeystone:false },
+];
+
+const COMPLETED_TODAY = {
+  '1': 'full',  // gym ✓
+  '2': 'full',  // creatina ✓
+  '3': 'full',  // vinagre ✓
+  '6': 'full',  // alimentarme ✓
+  '8': 'full',  // agradecer ✓
+  '11':'full',  // agua ✓
+};
+// Hoy: pendientes → citrato, colágeno, leer, papás, estudiar
+
+// ---------- Crear dos usuarios demo ----------
+step(10, 'Creando usuario sr_wayne...');
+
+const salt1 = randomSalt();
+const hash1 = await sha256(salt1 + ':' + '444');
+
+const salt2 = randomSalt();
+const hash2 = await sha256(salt2 + ':' + '444');
+
+const accounts = {
+  'sr_wayne': {
+    username: 'sr_wayne', display: 'sr_wayne',
+    salt: salt1, passHash: hash1,
+    created: new Date(Date.now() - 47 * 86400000).toISOString(),
+    lastLogin: Date.now(),
+  },
+  'valkiria': {
+    username: 'valkiria', display: 'valkiria',
+    salt: salt2, passHash: hash2,
+    created: new Date(Date.now() - 21 * 86400000).toISOString(),
+    lastLogin: Date.now() - 86400000,
+  },
+};
+localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+
+step(35, 'Simulando 47 días de uso para Sr. Wayne...');
+
+const todayStr = todayISO();
+const weekData = weekDataForToday();
+
+const wayneState = {
+  version: 3,
+  onboarded: true,
+  goals: [
+    'Forbes Colombia 2027 — construyendo desde hoy',
+    'Sacar 6-pack para diciembre',
+    'Leer 24 libros este año',
+  ],
+  habits: HABITS,
+  categories: [
+    { id:'salud',   icon:'💪', name:'Salud & Cuerpo' },
+    { id:'mente',   icon:'🧠', name:'Mente & Aprendizaje' },
+    { id:'negocio', icon:'📈', name:'Negocio & Disciplina' },
+    { id:'familia', icon:'❤️', name:'Personal & Familia' },
+    { id:'bio',     icon:'⚡', name:'Energía & Biohacking' },
+  ],
+  rewards: [
+    { id:'r1', name:'Ver una serie',       emoji:'📺', cost:500,  desc:'Mereces un capítulo sin culpa' },
+    { id:'r2', name:'Comida libre',        emoji:'🍔', cost:800,  desc:'Un día sin restricciones' },
+    { id:'r3', name:'Gaming sin culpa',    emoji:'🎮', cost:600,  desc:'3 horas de entretenimiento puro' },
+    { id:'r4', name:'Tarde libre',         emoji:'🌴', cost:1200, desc:'Sin trabajo ni obligaciones' },
+    { id:'r5', name:'Compra personal',     emoji:'🛍️', cost:2000, desc:'Cómprate algo que quieras' },
+    { id:'r6', name:'Masaje o spa',        emoji:'💆', cost:2500, desc:'Recuperación total merecida' },
+    { id:'r7', name:'Restaurante de lujo', emoji:'🍽️', cost:3000, desc:'Sal a comer a donde quieras' },
+    { id:'r8', name:'Día de viaje',        emoji:'✈️', cost:8000, desc:'Escápate a donde quieras' },
+  ],
+  rewardHistory: { 'r1': 3, 'r3': 2, 'r2': 1 },
+  completedToday: COMPLETED_TODAY,
+  totalPoints: 4250,
+  streak: 12,
+  lastDate: todayStr,
+  perfectDays: 7,
+  totalCompleted: 312,
+  weekData,
+  settings: {
+    penaltyEnabled: true,
+    streakWarningEnabled: true,
+    debtRewardsEnabled: false,
+    remindersEnabled: true,
+    gogginsMode: false,
+    variableRewardsEnabled: true,
+    playerName: 'Sr. Wayne',
+    avatar: '🦇',
+    phrasePack: 'disciplina',
+  },
+  quoteIndex: new Date().getDate() % 15,
+  freezes: 2,
+  freezesEarned: 3,
+  recovery: null,
+  commitments: [
+    {
+      date: todayStr,
+      type: 'nmt',
+      text: 'Lo haré a las 9am antes de abrir Instagram, sin excusas.',
+      habits: ['Estudiar mínimo 1h', 'Leer mínimo 10 páginas'],
+    }
+  ],
+  keystoneCompleted: true,
+  dailyIntention: {
+    date: todayStr,
+    habitId: '10',
+    habitName: 'Estudiar mínimo 1h',
+    habitEmoji: '💼',
+    time: '9am',
+  },
+  weeklyReviews: [
+    {
+      date: daysAgoISO(7),
+      answers: [
+        'Completé el gym 5/5 días. Leí todos los días sin falta.',
+        'Me costó estudiar los lunes — el WhatsApp me robó el tiempo.',
+        'Voy a estudiar antes de revisar el teléfono, a las 9am exactas.',
+        'Gym y lectura — los que mueven todo lo demás.',
+        '',
+      ],
+      rating: 8,
+    },
+  ],
+  habitCompletions: {
+    '1':45, '2':82, '3':78, '4':71, '5':68,
+    '6':91, '7':67, '8':95, '9':73, '10':51, '11':88,
+  },
+  categoryCompletions: {
+    salud: 224, mente: 162, negocio: 51, familia: 73, bio: 299,
+  },
+  createdAt: daysAgoISO(47),
+  variableRewardHabitId: '7',  // ¡Leer vale 2x hoy! 🎲
+  variableRewardDate: todayStr,
+  habitStreaks: {
+    '1':  { streak: 12 },   // gym — mismo que racha global
+    '2':  { streak: 12 },
+    '3':  { streak: 12 },
+    '4':  { streak: 8  },
+    '5':  { streak: 8  },
+    '6':  { streak: 12 },
+    '7':  { streak: 5  },   // lectura — racha más corta
+    '8':  { streak: 12 },
+    '9':  { streak: 7  },
+    '10': { streak: 3  },   // estudio — cuesta más
+    '11': { streak: 12 },
+  },
+  earnedBadges: ['streak7','pts1000','perfect1','warrior','freezer'],
+};
+
+localStorage.setItem(STATE_PREFIX + 'sr_wayne', JSON.stringify(wayneState));
+
+step(65, 'Creando usuario Valkiria...');
+
+const valkiState = {
+  version: 3,
+  onboarded: true,
+  goals: [
+    'Correr media maratón en noviembre',
+    'Meditar todos los días del año',
+  ],
+  habits: [
+    { id:'v1', name:'Correr 5km',       emoji:'🏃', days:['L','X','V','S'], cat:'salud',   difficulty:'hard',   anchor:'Al amanecer', mvh:'20 min caminata', isKeystone:true },
+    { id:'v2', name:'Meditar 15 min',   emoji:'🧘', days:[...ALL], cat:'mente',   difficulty:'normal', anchor:'Al despertar', mvh:'2 min de respiración', isKeystone:false },
+    { id:'v3', name:'Leer 20 páginas',  emoji:'📖', days:[...ALL], cat:'mente',   difficulty:'normal', anchor:'Antes de dormir', mvh:'5 páginas', isKeystone:false },
+    { id:'v4', name:'Sin azúcar',       emoji:'🚭', days:[...ALL], cat:'salud',   difficulty:'hard',   anchor:'', mvh:'Reduce a la mitad', isKeystone:false },
+    { id:'v5', name:'Llamar a mamá',    emoji:'📞', days:['L','V'], cat:'familia', difficulty:'easy',   anchor:'Al almorzar', mvh:'Mensaje de voz', isKeystone:false },
+    { id:'v6', name:'Inglés 30 min',    emoji:'🌎', days:[...WD],  cat:'negocio', difficulty:'normal', anchor:'En el almuerzo', mvh:'10 min de podcast', isKeystone:false },
+    { id:'v7', name:'Tomar vitaminas',  emoji:'💊', days:[...ALL], cat:'bio',     difficulty:'easy',   anchor:'Con el desayuno', mvh:'', isKeystone:false },
+  ],
+  categories: [
+    { id:'salud',   icon:'💪', name:'Salud & Cuerpo' },
+    { id:'mente',   icon:'🧠', name:'Mente & Aprendizaje' },
+    { id:'negocio', icon:'📈', name:'Negocio & Disciplina' },
+    { id:'familia', icon:'❤️', name:'Personal & Familia' },
+    { id:'bio',     icon:'⚡', name:'Energía & Biohacking' },
+  ],
+  rewards: [
+    { id:'r1', name:'Día de spa',       emoji:'💆', cost:800,  desc:'Me lo gané' },
+    { id:'r2', name:'Serie maratón',    emoji:'📺', cost:500,  desc:'Sin culpa' },
+    { id:'r3', name:'Ropa deportiva',   emoji:'👟', cost:2000, desc:'Para seguir entrenando' },
+  ],
+  rewardHistory: { 'r1': 1 },
+  completedToday: { 'v2':'full', 'v7':'full', 'v3':'mvh' },
+  totalPoints: 1820,
+  streak: 5,
+  lastDate: todayStr,
+  perfectDays: 2,
+  totalCompleted: 98,
+  weekData: (() => {
+    const d = weekDataForToday();
+    return d.map((v, i) => i < weekDataForToday().length - 1 ? Math.max(0, v - 3) : 3);
+  })(),
+  settings: {
+    penaltyEnabled: false,
+    streakWarningEnabled: true,
+    debtRewardsEnabled: false,
+    remindersEnabled: true,
+    gogginsMode: false,
+    variableRewardsEnabled: true,
+    playerName: 'Valkiria',
+    avatar: '🦅',
+    phrasePack: 'zen',
+  },
+  quoteIndex: (new Date().getDate() + 3) % 15,
+  freezes: 1,
+  freezesEarned: 1,
+  recovery: null,
+  commitments: [],
+  keystoneCompleted: false,
+  dailyIntention: null,
+  weeklyReviews: [],
+  habitCompletions: { 'v1':18, 'v2':19, 'v3':15, 'v4':12, 'v5':8, 'v6':14, 'v7':20 },
+  categoryCompletions: { salud: 30, mente: 34, negocio: 14, familia: 8, bio: 20 },
+  createdAt: daysAgoISO(21),
+  variableRewardHabitId: null,
+  variableRewardDate: todayStr,
+};
+
+localStorage.setItem(STATE_PREFIX + 'valkiria', JSON.stringify(valkiState));
+
+step(90, 'Iniciando sesión como Sr. Wayne...');
+
+// Activar sesión como sr_wayne
+localStorage.setItem(SESSION_KEY, 'sr_wayne');
+
+step(100, '¡Listo! Redirigiendo...');
+
+await new Promise(r => setTimeout(r, 600));
+window.location.href = './index.html';
+</script>
+</body>
+</html>
