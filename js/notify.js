@@ -2,8 +2,18 @@
    notify.js — Notificaciones de hábitos + banner de racha en peligro
    ============================================================ */
 
-import { getState } from './state.js';
+import { getState, getActiveUser } from './state.js';
 import { todayHabits, isCompleted, dayCounts } from './game.js';
+
+// Clave pública VAPID (pública — segura de exponer en el cliente)
+const VAPID_PUBLIC_KEY = 'BPBRbvTEywSy_qSg2JqGVIvDfhb-UgCth2McNdntxR_kTtCAu1S989NsuGV3mJzej6cTl8KaVoQii4CP_-bHKE8';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
 
 export async function requestNotificationPermission() {
   if (!('Notification' in window)) return false;
@@ -11,6 +21,39 @@ export async function requestNotificationPermission() {
   if (Notification.permission === 'denied') return false;
   const res = await Notification.requestPermission();
   return res === 'granted';
+}
+
+// Suscribirse a Web Push (notificaciones en background, app cerrada)
+export async function subscribeToWebPush() {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+
+    const granted = await requestNotificationPermission();
+    if (!granted) return false;
+
+    const reg = await navigator.serviceWorker.ready;
+    let subscription = await reg.pushManager.getSubscription();
+
+    // Si ya existe suscripción, renovar en el servidor de todas formas
+    if (!subscription) {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+
+    const userId = getActiveUser() || 'anon';
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription, userId }),
+    });
+
+    return true;
+  } catch (e) {
+    console.warn('Web Push falló:', e);
+    return false;
+  }
 }
 
 function pendingCount() {

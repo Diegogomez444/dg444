@@ -77,6 +77,23 @@ self.addEventListener('fetch', event => {
   }
 });
 
+// Recibir push del servidor y mostrar notificación (app cerrada/en background)
+self.addEventListener('push', event => {
+  let data = { title: 'DG444', body: 'Revisa tus hábitos de hoy 💪', url: '/' };
+  try { if (event.data) data = { ...data, ...event.data.json() }; } catch (_) {}
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
+      tag: 'dg444-reminder',
+      renotify: true,
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
 // Click en notificación: enfocar/abrir la app
 self.addEventListener('notificationclick', event => {
   event.notification.close();

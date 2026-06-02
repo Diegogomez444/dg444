@@ -16,7 +16,7 @@ import {
   toggleSetting, setPlayerName, setPhrasePack, openGoalsEditor,
   confirmReset, doReset, exportProgress, importProgress, enableNotifications,
 } from './settings.js';
-import { scheduleReminders, initStreakDanger, checkStreakDanger } from './notify.js';
+import { scheduleReminders, initStreakDanger, checkStreakDanger, subscribeToWebPush } from './notify.js';
 import { signup, login, logout, restoreSession, listUsernames, validateUsername, getUserAvatar } from './auth.js';
 import { startOnboarding } from './onboarding.js';
 import {
@@ -217,6 +217,11 @@ function showApp({ runDayReset }) {
   }
   initStreakDanger();
   scheduleReminders();
+
+  // Auto-suscribir a Web Push si ya tiene permiso concedido (silencioso, sin popup)
+  if (Notification?.permission === 'granted') {
+    subscribeToWebPush().catch(() => {}); // silencioso — no bloquear si falla
+  }
 }
 
 // ---------- Navegación ----------

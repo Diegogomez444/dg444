@@ -1,0 +1,25 @@
+{
+  "name": "dg444",
+  "version": "1.0.0",
+  "description": "App personal de seguimiento de hábitos **gamificada** (estilo RPG): niveles, XP, rangos, rachas, badges y recompensas canjeables. PWA instalable, 100% offline, sin backend.",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Diegogomez444/dg444.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Diegogomez444/dg444/issues"
+  },
+  "homepage": "https://github.com/Diegogomez444/dg444#readme",
+  "dependencies": {
+    "@vercel/kv": "^3.0.0",
+    "web-push": "^3.6.7"
+  }
+}

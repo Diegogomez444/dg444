@@ -1,6 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
+  "functions": {
+    "api/*.js": { "runtime": "nodejs22.x" }
+  },
+  "crons": [
+    { "path": "/api/cron", "schedule": "0 13 * * *" },
+    { "path": "/api/cron", "schedule": "0 17 * * *" },
+    { "path": "/api/cron", "schedule": "0 0 * * *" },
+    { "path": "/api/cron", "schedule": "0 2 * * *" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
@@ -11,14 +20,13 @@
     },
     {
       "source": "/manifest.json",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, DELETE, OPTIONS" }
       ]
     }
   ]

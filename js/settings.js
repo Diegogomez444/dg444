@@ -5,7 +5,7 @@
 import { getState, saveState, resetState, exportState, importState } from './state.js';
 import { toast, openModal, closeModal } from './ux.js';
 import { renderAll } from './render.js';
-import { scheduleReminders, requestNotificationPermission } from './notify.js';
+import { scheduleReminders, requestNotificationPermission, subscribeToWebPush } from './notify.js';
 
 export function toggleSetting(key) {
   const s = getState();
@@ -123,10 +123,15 @@ export function importProgress() {
 
 export async function enableNotifications() {
   const granted = await requestNotificationPermission();
-  if (granted) {
-    toast('Notificaciones activadas 🔔', 'success');
-    scheduleReminders();
+  if (!granted) { toast('Permiso de notificaciones denegado', 'error'); return; }
+
+  scheduleReminders(); // recordatorios mientras la app está abierta
+
+  // Suscripción Web Push para notificaciones en background (app cerrada)
+  const ok = await subscribeToWebPush();
+  if (ok) {
+    toast('🔔 Notificaciones activadas — llegarán aunque la app esté cerrada', 'success');
   } else {
-    toast('Permiso de notificaciones denegado', 'error');
+    toast('🔔 Notificaciones activas (solo con la app abierta)', 'success');
   }
 }
