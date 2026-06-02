@@ -719,3 +719,32 @@ input { font-family: inherit; }
 .review-qa { }
 .review-q-label { font-size: 11px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
 .review-a-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+/* ============================================================
+   Pantalla de notificaciones en onboarding
+   ============================================================ */
+.notif-prompt {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 8px 4px 16px; gap: 0;
+}
+.notif-bell {
+  font-size: 72px; margin-bottom: 16px;
+  animation: mascotBob 2s ease-in-out infinite;
+}
+.notif-title {
+  font-family: 'Cinzel', serif; font-weight: 700; font-size: 26px;
+  margin-bottom: 12px;
+}
+.notif-sub {
+  font-size: 14px; color: var(--text2); line-height: 1.6;
+  margin-bottom: 24px; max-width: 320px;
+}
+.notif-schedule {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 14px 18px; margin-bottom: 24px;
+  display: flex; flex-direction: column; gap: 10px; text-align: left;
+}
+.notif-time {
+  font-size: 14px; color: var(--text); line-height: 1.4;
+}
+.notif-prompt .btn { width: 100%; margin-bottom: 4px; }

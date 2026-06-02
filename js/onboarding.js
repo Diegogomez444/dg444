@@ -4,8 +4,8 @@
    ============================================================ */
 
 import { getState, saveState, suggestedHabits } from './state.js';
-import { PHRASE_PACKS, getQuote, avatarHtml, compressAvatar } from './ux.js';
-import { toast, confetti } from './ux.js';
+import { PHRASE_PACKS, getQuote, avatarHtml, compressAvatar, toast, confetti } from './ux.js';
+import { subscribeToWebPush } from './notify.js';
 
 const AVATARS = [
   '🦸','🦹','🥷','🧙','🧛','🦊','🐺','🦁','🐉','🦅',
@@ -384,9 +384,67 @@ export function startOnboarding(account, onDone) {
     s.onboarded = true;
     saveState();
     confetti();
-    root.classList.add('hidden');
-    root.innerHTML = '';
-    onDone();
+    // Mostrar pantalla de notificaciones después del confetti
+    setTimeout(() => showNotifPrompt(data.name), 800);
+  }
+
+  function showNotifPrompt(name) {
+    // Si el navegador no soporta notificaciones, ir directo a la app
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      root.classList.add('hidden');
+      root.innerHTML = '';
+      onDone();
+      return;
+    }
+    // Si ya tiene permiso concedido, suscribir silencioso y continuar
+    if (Notification.permission === 'granted') {
+      subscribeToWebPush().catch(() => {});
+      root.classList.add('hidden');
+      root.innerHTML = '';
+      onDone();
+      return;
+    }
+
+    root.innerHTML = `
+      <div class="notif-prompt">
+        <div class="notif-bell">🔔</div>
+        <div class="notif-title">No pierdas tu racha</div>
+        <div class="notif-sub">
+          Te avisamos cuando sea hora de completar tus hábitos —
+          aunque la app esté cerrada. Así nunca se te olvida.
+        </div>
+        <div class="notif-schedule">
+          <div class="notif-time">☀️ <b>8am</b> — Buenos días, arranca el día</div>
+          <div class="notif-time">💪 <b>12pm</b> — ¿Cómo van los hábitos?</div>
+          <div class="notif-time">🔥 <b>7pm</b> — Quedan pocas horas</div>
+          <div class="notif-time">⚠️ <b>9pm</b> — Último aviso para la racha</div>
+        </div>
+        <button class="btn btn-primary btn-block" id="notifYes">
+          🔔 Activar notificaciones
+        </button>
+        <button class="onb-skip" id="notifSkip">Ahora no, activar después en Ajustes</button>
+      </div>`;
+
+    root.querySelector('#notifYes').addEventListener('click', async () => {
+      const btn = root.querySelector('#notifYes');
+      btn.disabled = true;
+      btn.textContent = 'Activando...';
+      const ok = await subscribeToWebPush();
+      if (ok) {
+        toast('🔔 ¡Notificaciones activadas! Te cuidamos la racha.', 'success');
+      } else {
+        toast('Puedes activarlas luego en Ajustes', '');
+      }
+      root.classList.add('hidden');
+      root.innerHTML = '';
+      onDone();
+    });
+
+    root.querySelector('#notifSkip').addEventListener('click', () => {
+      root.classList.add('hidden');
+      root.innerHTML = '';
+      onDone();
+    });
   }
 
   render();
