@@ -374,10 +374,15 @@ input { font-family: inherit; }
 .auth-screen, .onb-screen {
   position: fixed; inset: 0; z-index: 100;
   background: radial-gradient(120% 80% at 50% 0%, #11151e 0%, var(--bg) 60%);
-  display: flex; align-items: center; justify-content: center;
-  padding: calc(24px + var(--safe-top)) 20px calc(24px + var(--safe-bottom));
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: calc(20px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
   overflow-y: auto;
 }
+/* Auth sí puede centrarse — contenido siempre corto */
+.auth-screen { align-items: center; min-height: 100%; }
+/* Onboarding arranca desde arriba para que el scroll funcione en listas largas */
+.onb-screen { align-items: flex-start; }
+.onb-card { width: 100%; max-width: 440px; margin: 0 auto; padding-bottom: 32px; }
 .auth-card {
   width: 100%; max-width: 400px; animation: fadeUp 0.4s ease;
 }
