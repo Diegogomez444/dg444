@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
-  "functions": {
-    "api/*.js": { "runtime": "nodejs22.x" }
-  },
   "crons": [
     { "path": "/api/cron", "schedule": "0 13 * * *" },
     { "path": "/api/cron", "schedule": "0 17 * * *" },
