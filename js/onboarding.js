@@ -391,17 +391,31 @@ export function startOnboarding(account, onDone) {
   function showNotifPrompt(name) {
     // Si el navegador no soporta notificaciones, ir directo a la app
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-      root.classList.add('hidden');
-      root.innerHTML = '';
-      onDone();
-      return;
+      root.classList.add('hidden'); root.innerHTML = ''; onDone(); return;
     }
     // Si ya tiene permiso concedido, suscribir silencioso y continuar
     if (Notification.permission === 'granted') {
       subscribeToWebPush().catch(() => {});
-      root.classList.add('hidden');
-      root.innerHTML = '';
-      onDone();
+      root.classList.add('hidden'); root.innerHTML = ''; onDone(); return;
+    }
+    // Si ya fue denegado, mostrar pantalla con instrucciones y continuar
+    if (Notification.permission === 'denied') {
+      root.innerHTML = `
+        <div class="notif-prompt">
+          <div class="notif-bell">🔔</div>
+          <div class="notif-title">Actívalas desde Ajustes</div>
+          <div class="notif-sub">
+            El permiso fue bloqueado antes. Para recibir recordatorios de tus hábitos actívalas manualmente:
+          </div>
+          <div class="notif-schedule" style="text-align:left">
+            <div class="notif-time">📱 <b>iPhone:</b> Ajustes → Aplicaciones → Safari → Configuración de sitios web → Notificaciones → dg444.vercel.app → Permitir</div>
+            <div class="notif-time" style="margin-top:10px">⭐ <b>Mejor opción:</b> instala la app en el Home Screen (Compartir → Agregar a pantalla de inicio) y actívalas desde ahí.</div>
+          </div>
+          <button class="btn btn-primary btn-block" id="notifSkip">¡Entendido, vamos! →</button>
+        </div>`;
+      root.querySelector('#notifSkip').addEventListener('click', () => {
+        root.classList.add('hidden'); root.innerHTML = ''; onDone();
+      });
       return;
     }
 

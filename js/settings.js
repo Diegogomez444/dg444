@@ -122,8 +122,27 @@ export function importProgress() {
 }
 
 export async function enableNotifications() {
+  // Si ya estaba denegado, guiar al usuario en vez de fallar en silencio
+  if ('Notification' in window && Notification.permission === 'denied') {
+    openModal(`
+      <div class="modal-title">🔔 Notificaciones bloqueadas</div>
+      <div class="modal-subtitle">
+        iOS bloqueó el permiso. Para activarlas tienes dos opciones:
+      </div>
+      <div class="card" style="margin:12px 0;font-size:13px;line-height:1.7">
+        <b>Opción A — Desde Ajustes del iPhone:</b><br>
+        Ajustes → Aplicaciones → Safari → Configuración de sitios web → Notificaciones → <b>dg444.vercel.app → Permitir</b>
+        <br><br>
+        <b>Opción B (recomendada para iOS):</b><br>
+        Instala la app en el Home Screen → Safari → Compartir → <b>Agregar a pantalla de inicio</b> → ábrela desde ahí → vuelve a Ajustes → Activar notificaciones.
+      </div>
+      <button class="btn btn-ghost btn-block" data-action="close-modal">Entendido</button>
+    `);
+    return;
+  }
+
   const granted = await requestNotificationPermission();
-  if (!granted) { toast('Permiso de notificaciones denegado', 'error'); return; }
+  if (!granted) { toast('Permiso denegado. Ve a Ajustes del iPhone para habilitarlo.', 'error'); return; }
 
   scheduleReminders(); // recordatorios mientras la app está abierta
 
